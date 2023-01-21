@@ -12,10 +12,12 @@ namespace UserService
     public class HostedService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<HostedService> _hostedService;
 
-        public HostedService(IServiceScopeFactory scopeFactory)
+        public HostedService(IServiceScopeFactory scopeFactory, ILogger<HostedService> hostedService)
         {
             _scopeFactory = scopeFactory;
+            _hostedService = hostedService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -38,7 +40,8 @@ namespace UserService
                             routingKey: integrationEvent.Event,
                             basicProperties: null,
                             body: body);
-                        Console.WriteLine("Published: " + integrationEvent.Event + " " + integrationEvent.Data);
+                        channel.WaitForConfirmsOrDie(new TimeSpan(0, 0, 5)); 
+                        _hostedService.LogInformation("Published: " + integrationEvent.Event + " " + integrationEvent.Data);
                         dbContext.Remove(integrationEvent);
                         await dbContext.SaveChangesAsync(stoppingToken);
                     }
@@ -46,7 +49,7 @@ namespace UserService
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.ToString());
+                    _hostedService.LogError(e.ToString());
                     await Task.Delay(4000, stoppingToken);
                 }
             }
