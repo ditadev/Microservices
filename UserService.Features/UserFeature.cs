@@ -8,17 +8,21 @@ using UserService.Model.Model;
 
 namespace UserService.Features;
 
-public class UserFeature
+public class UserFeature : IDisposable
 {
     private readonly ILogger<UserFeature> _logger;
     private readonly UserDataContext _userDataContext;
+    private IModel _channel;
+    private IConnection _connection;
 
-    public UserFeature(UserDataContext userDataContext, ILogger<UserFeature> logger)
+    public UserFeature(UserDataContext userDataContext, ILogger<UserFeature> logger, ConnectionFactory factory)
     {
         _userDataContext = userDataContext;
         _logger = logger;
+        _connection = factory.CreateConnection();
+        _channel = _connection.CreateModel();
     }
-
+    
     public async Task<User> AddUser(User user)
     {
         _userDataContext.User.Add(user);
@@ -28,8 +32,12 @@ public class UserFeature
             id = user.ID,
             name = user.Name
         });
-        PublishToMessageQueue("user.add", integrationEventData);
-        _logger.LogInformation($"user message queued from add user method{integrationEventData}");
+        var body = Encoding.UTF8.GetBytes(integrationEventData);
+        _channel.BasicPublish("user",
+            "user.add",
+            null,
+            body);
+        _logger.LogInformation($"user message published{body.Length}");
         return user;
     }
 
@@ -38,17 +46,14 @@ public class UserFeature
         return await _userDataContext.User.ToListAsync();
     }
 
-    private void PublishToMessageQueue(string integrationEvent, string eventData)
+    public void Dispose()
     {
-        // TOOO: Reuse and close connections and channel, etc, 
-        var factory = new ConnectionFactory();
-        var connection = factory.CreateConnection();
-        var channel = connection.CreateModel();
-        var body = Encoding.UTF8.GetBytes(eventData);
-        channel.BasicPublish("user",
-            integrationEvent,
-            null,
-            body);
-        _logger.LogInformation($"user message published{body.Length}");
+        _channel?.Dispose();
+        _connection?.Dispose();
+    }
+
+    ~UserFeature()
+    {
+        Dispose();
     }
 }

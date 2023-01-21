@@ -18,7 +18,7 @@ public class PostFeature
 
     public async Task<Post> AddPost(Post post)
     {
-        var posti = new Post
+        var newPost = new Post
         {
             PostId = post.PostId,
             Title = post.Title,
@@ -26,7 +26,7 @@ public class PostFeature
             UserId = post.UserId,
             User = await _postDataContext.User.FirstOrDefaultAsync(x => x.ID == post.UserId)
         };
-        _postDataContext.Post.Add(posti);
+        _postDataContext.Post.Add(newPost);
         await _postDataContext.SaveChangesAsync();
         return post;
     }
