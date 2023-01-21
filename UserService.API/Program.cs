@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using UserService;
 using UserService.Features;
 using UserService.Model.DataContext;
 
