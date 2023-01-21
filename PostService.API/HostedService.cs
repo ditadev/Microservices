@@ -23,41 +23,39 @@ public class HostedService : BackgroundService
 
      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
      {
-         using (var scope = _scopeFactory.CreateScope())
+         using var scope = _scopeFactory.CreateScope();
+         var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
+         _connection = _factory.CreateConnection();
+         _channel = _connection.CreateModel();
+         var consumer = new EventingBasicConsumer(_channel);
+
+         consumer.Received += async (model, ea) =>
          {
-             var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
-             _connection = _factory.CreateConnection();
-             _channel = _connection.CreateModel();
-             var consumer = new EventingBasicConsumer(_channel);
+             var body = ea.Body.ToArray();
+             var message = Encoding.UTF8.GetString(body);
+             _logger.LogInformation(" [x] Received {0}", message);
 
-             consumer.Received += async (model, ea) =>
+             var data = JObject.Parse(message);
+             var type = ea.RoutingKey;
+             switch (type)
              {
-                 var body = ea.Body.ToArray();
-                 var message = Encoding.UTF8.GetString(body);
-                 _logger.LogInformation(" [x] Received {0}", message);
-
-                 var data = JObject.Parse(message);
-                 var type = ea.RoutingKey;
-                 switch (type)
-                 {
-                     case "user.add":
-                         dbContext.User.Add(new User
-                         {
-                             ID = data["id"].Value<int>(),
-                             Name = data["name"].Value<string>()
-                         });
-                         await dbContext.SaveChangesAsync();
-                         break;
-                     case "user.update":
-                         var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
-                         user.Name = data["newname"].Value<string>();
-                         await dbContext.SaveChangesAsync();
-                         break;
-                 }
-             };
-             _channel.BasicConsume("user.postservice", true, consumer);
-             await Task.Delay(Timeout.Infinite, stoppingToken);
-         }
+                 case "user.add":
+                     dbContext.User.Add(new User
+                     {
+                         ID = data["id"].Value<int>(),
+                         Name = data["name"].Value<string>()
+                     });
+                     await dbContext.SaveChangesAsync(stoppingToken);
+                     break;
+                 case "user.update":
+                     var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
+                     user.Name = data["newname"].Value<string>();
+                     await dbContext.SaveChangesAsync(stoppingToken);
+                     break;
+             }
+         };
+         _channel.BasicConsume("user.postservice", true, consumer);
+         await Task.Delay(Timeout.Infinite, stoppingToken);
      }
      public override Task StopAsync(CancellationToken cancellationToken)
      {
