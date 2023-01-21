@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PostService;
 using PostService.Domain.DataContext;
 using PostService.Features;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -14,6 +15,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<ConnectionFactory>();
 builder.Services.AddHostedService<HostedService>();
 builder.Services.AddScoped<PostFeature>();
 builder.Services.AddDbContext<PostDataContext>();
