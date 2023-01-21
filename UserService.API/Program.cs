@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+using UserService;
 using UserService.Features;
 using UserService.Model.DataContext;
 
@@ -11,6 +12,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<HostedService>();
 builder.Services.AddSingleton<ConnectionFactory>();
 builder.Services.AddDbContext<UserDataContext>();
 builder.Services.AddScoped<UserFeature>();
