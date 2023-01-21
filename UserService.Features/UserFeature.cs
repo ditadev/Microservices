@@ -8,36 +8,36 @@ using UserService.Model.Model;
 
 namespace UserService.Features;
 
-public class UserFeature : IDisposable
+public class UserFeature 
 {
-    private readonly ILogger<UserFeature> _logger;
     private readonly UserDataContext _userDataContext;
-    private IModel _channel;
-    private IConnection _connection;
 
-    public UserFeature(UserDataContext userDataContext, ILogger<UserFeature> logger, ConnectionFactory factory)
+    public UserFeature(UserDataContext userDataContext)
     {
         _userDataContext = userDataContext;
-        _logger = logger;
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
     }
     
     public async Task<User> AddUser(User user)
     {
+        await using var transaction = await _userDataContext.Database.BeginTransactionAsync();
         _userDataContext.User.Add(user);
         await _userDataContext.SaveChangesAsync();
+
         var integrationEventData = JsonConvert.SerializeObject(new
         {
             id = user.ID,
             name = user.Name
         });
-        var body = Encoding.UTF8.GetBytes(integrationEventData);
-        _channel.BasicPublish("user",
-            "user.add",
-            null,
-            body);
-        _logger.LogInformation($"user message published{body.Length}");
+
+        _userDataContext.IntegrationEventOutbox.Add(
+            new IntegrationEvent
+            {
+                Event = "user.add",
+                Data = integrationEventData
+            });
+
+        await _userDataContext.SaveChangesAsync();
+        await transaction.CommitAsync();
         return user;
     }
 
@@ -45,15 +45,5 @@ public class UserFeature : IDisposable
     {
         return await _userDataContext.User.ToListAsync();
     }
-
-    public void Dispose()
-    {
-        _channel?.Dispose();
-        _connection?.Dispose();
-    }
-
-    ~UserFeature()
-    {
-        Dispose();
-    }
+    
 }
