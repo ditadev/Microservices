@@ -12,6 +12,7 @@ public class HostedService : BackgroundService
     private readonly ILogger<HostedService> _logger;
     private readonly ConnectionFactory _factory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly object _lock = new object();
     private IModel _channel;
     private IConnection _connection;
      public HostedService(ILogger<HostedService> logger, ConnectionFactory factory, IServiceScopeFactory scopeFactory)
@@ -23,7 +24,8 @@ public class HostedService : BackgroundService
 
      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
      {
-         using var scope = _scopeFactory.CreateScope();
+
+         var scope = _scopeFactory.CreateScope();
          var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
          _connection = _factory.CreateConnection();
          _channel = _connection.CreateModel();
@@ -37,37 +39,47 @@ public class HostedService : BackgroundService
 
              var data = JObject.Parse(message);
              var type = ea.RoutingKey;
-             switch (type)
-             {
-                 case "user.add":
-                     dbContext.User.Add(new User
-                     {
-                         ID = data["id"].Value<int>(),
-                         Name = data["name"].Value<string>()
-                     });
-                     await dbContext.SaveChangesAsync(stoppingToken);
-                     break;
-                 case "user.update":
-                     var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
-                     user.Name = data["newname"].Value<string>();
-                     await dbContext.SaveChangesAsync(stoppingToken);
-                     break;
+           
+                 switch (type)
+                 {
+                     case "user.add":
+                         if (dbContext.User.Any(a => a.ID == data["id"].Value<int>()))
+                         {
+                             _logger.LogInformation("Ignoring old/duplicate entity");
+                         }
+                         else
+                         {
+                             dbContext.User.Add(new User()
+                             {
+                                 ID = data["id"].Value<int>(),
+                                 Name = data["name"].Value<string>(),
+                             });
+                            await dbContext.SaveChangesAsync(stoppingToken);
+                         }
+
+                         break;
+                     // case "user.update":
+                     //     int newVersion = data["version"].Value<int>();
+                     //     var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
+                     //     if (user.Version >= newVersion)
+                     //     {
+                     //         Console.WriteLine("Ignoring old/duplicate entity");
+                     //     }
+                     //     else
+                     //     {
+                     //         user.Name = data["newname"].Value<string>();
+                     //         user.Version = newVersion;
+                     //         await dbContext.SaveChangesAsync(stoppingToken);
+                     //     }
+                     //     break;
+                 }
+
+                 _channel.BasicAck(ea.DeliveryTag, false);
+
              }
-         };
-         _channel.BasicConsume("user.postservice", true, consumer);
-         await Task.Delay(Timeout.Infinite, stoppingToken);
+
+             ;
+             _channel.BasicConsume("user.postservice", false, consumer);
      }
-     public override Task StopAsync(CancellationToken cancellationToken)
-     {
-         _logger.LogInformation("Hosted Service ended");
-         _channel?.Dispose();
-         _connection?.Dispose();
-         return base.StopAsync(cancellationToken);
-     }
-     public sealed override void Dispose()
-     {
-         _channel?.Dispose();
-         _connection?.Dispose();
-         GC.SuppressFinalize(this);
-     }
+     
 }

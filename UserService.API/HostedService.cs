@@ -40,7 +40,6 @@ namespace UserService
                             routingKey: integrationEvent.Event,
                             basicProperties: null,
                             body: body);
-                        channel.WaitForConfirmsOrDie(new TimeSpan(0, 0, 5)); 
                         _hostedService.LogInformation("Published: " + integrationEvent.Event + " " + integrationEvent.Data);
                         dbContext.Remove(integrationEvent);
                         await dbContext.SaveChangesAsync(stoppingToken);
