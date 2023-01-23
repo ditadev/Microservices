@@ -24,22 +24,22 @@ public class HostedService : BackgroundService
 
      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
      {
-
-         var scope = _scopeFactory.CreateScope();
-         var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
          _connection = _factory.CreateConnection();
          _channel = _connection.CreateModel();
          var consumer = new EventingBasicConsumer(_channel);
 
          consumer.Received += async (model, ea) =>
          {
-             var body = ea.Body.ToArray();
-             var message = Encoding.UTF8.GetString(body);
-             _logger.LogInformation(" [x] Received {0}", message);
+             lock (_lock)
+             {
+                 var scope = _scopeFactory.CreateScope();
+                 var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
+                 var body = ea.Body.ToArray();
+                 var message = Encoding.UTF8.GetString(body);
+                 _logger.LogInformation(" [x] Received {0}", message);
+                 var data = JObject.Parse(message);
+                 var type = ea.RoutingKey;
 
-             var data = JObject.Parse(message);
-             var type = ea.RoutingKey;
-           
                  switch (type)
                  {
                      case "user.add":
@@ -54,7 +54,7 @@ public class HostedService : BackgroundService
                                  ID = data["id"].Value<int>(),
                                  Name = data["name"].Value<string>(),
                              });
-                            await dbContext.SaveChangesAsync(stoppingToken);
+                              dbContext.SaveChangesAsync(stoppingToken);
                          }
 
                          break;
@@ -73,13 +73,13 @@ public class HostedService : BackgroundService
                      //     }
                      //     break;
                  }
-
                  _channel.BasicAck(ea.DeliveryTag, false);
-
+                
              }
 
-             ;
-             _channel.BasicConsume("user.postservice", false, consumer);
+         };
+         _channel.BasicConsume("user.postservice", false, consumer);
+         _channel.ConfirmSelect();
      }
      
 }

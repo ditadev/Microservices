@@ -12,12 +12,12 @@ namespace UserService
     public class HostedService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<HostedService> _hostedService;
+        private readonly ILogger<HostedService> _logger;
 
-        public HostedService(IServiceScopeFactory scopeFactory, ILogger<HostedService> hostedService)
+        public HostedService(IServiceScopeFactory scopeFactory, ILogger<HostedService> logger)
         {
             _scopeFactory = scopeFactory;
-            _hostedService = hostedService;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -30,28 +30,37 @@ namespace UserService
                     using var connection = factory.CreateConnection();
                     using var channel = connection.CreateModel();
 
-                    using var scope = _scopeFactory.CreateScope();
-                     using var dbContext = scope.ServiceProvider.GetRequiredService<UserDataContext>();
-                    var integrationEvents = dbContext.IntegrationEventOutbox.AsNoTracking().OrderBy(o => o.ID).ToList();
-                    foreach (var integrationEvent in integrationEvents)
+                    while (!stoppingToken.IsCancellationRequested)
                     {
-                        var body = Encoding.UTF8.GetBytes(integrationEvent.Data);
-                        channel.BasicPublish(exchange: "user",
-                            routingKey: integrationEvent.Event,
-                            basicProperties: null,
-                            body: body);
-                        _hostedService.LogInformation("Published: " + integrationEvent.Event + " " + integrationEvent.Data);
-                        dbContext.Remove(integrationEvent);
-                        await dbContext.SaveChangesAsync(stoppingToken);
+                        using var scope = _scopeFactory.CreateScope();
+                        using var dbContext = scope.ServiceProvider.GetRequiredService<UserDataContext>();
+                        var integrationEvents =
+                            dbContext.IntegrationEventOutbox.OrderBy(o => o.ID).ToList();
+                        foreach (var integrationEvent in integrationEvents)
+                        {
+                            var body = Encoding.UTF8.GetBytes(integrationEvent.Data);
+                            channel.BasicPublish(exchange: "user",
+                                routingKey: integrationEvent.Event,
+                                basicProperties: null,
+                                body: body);
+                            _logger.LogInformation("Published: " + integrationEvent.Event + " " +
+                                                          integrationEvent.Data);
+                            dbContext.Remove(integrationEvent);
+                            await dbContext.SaveChangesAsync(stoppingToken);
+                        }
+                        await Task.Delay(2000, stoppingToken);
+
                     }
-                    await Task.Delay(2000, stoppingToken);
                 }
                 catch (Exception e)
                 {
-                    _hostedService.LogError(e.ToString());
+                    _logger.LogError(e.ToString());
                     await Task.Delay(4000, stoppingToken);
                 }
             }
         }
     }
 }
+
+    
+
