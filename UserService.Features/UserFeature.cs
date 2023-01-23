@@ -37,7 +37,7 @@ public class UserFeature : IDisposable
             "user.add",
             null,
             body);
-        _logger.LogInformation($"user message published {body.Length}");
+        _logger.LogInformation($"user message published {user.ID}");
         return user;
     }
 
