@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using PostService.Domain.DataContext;
 using PostService.Domain.Model;
 
@@ -7,13 +6,11 @@ namespace PostService.Features;
 
 public class PostFeature
 {
-    private readonly ILogger<PostFeature> _logger;
     private readonly PostDataContext _postDataContext;
 
-    public PostFeature(PostDataContext postDataContext, ILogger<PostFeature> logger)
+    public PostFeature(PostDataContext postDataContext)
     {
         _postDataContext = postDataContext;
-        _logger = logger;
     }
 
     public async Task<Post> AddPost(Post post)

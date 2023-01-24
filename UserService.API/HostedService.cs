@@ -36,6 +36,7 @@ namespace UserService
                         using var dbContext = scope.ServiceProvider.GetRequiredService<UserDataContext>();
                         var integrationEvents =
                             dbContext.IntegrationEventOutbox.OrderBy(o => o.ID).ToList();
+                       
                         foreach (var integrationEvent in integrationEvents)
                         {
                             var body = Encoding.UTF8.GetBytes(integrationEvent.Data);
@@ -44,12 +45,12 @@ namespace UserService
                                 basicProperties: null,
                                 body: body);
                             _logger.LogInformation("Published: " + integrationEvent.Event + " " +
-                                                          integrationEvent.Data);
+                                                   integrationEvent.Data);
                             dbContext.Remove(integrationEvent);
                             await dbContext.SaveChangesAsync(stoppingToken);
                         }
-                        await Task.Delay(2000, stoppingToken);
 
+                        await Task.Delay(2000, stoppingToken);
                     }
                 }
                 catch (Exception e)
@@ -61,6 +62,3 @@ namespace UserService
         }
     }
 }
-
-    
-
