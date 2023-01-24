@@ -28,6 +28,7 @@ public class UserFeature
             id = user.ID,
             name = user.Name
         });
+<<<<<<< HEAD
 
         _userDataContext.IntegrationEventOutbox.Add(
             new IntegrationEvent
@@ -38,6 +39,14 @@ public class UserFeature
 
         await _userDataContext.SaveChangesAsync();
         await transaction.CommitAsync();
+=======
+        var body = Encoding.UTF8.GetBytes(integrationEventData);
+        _channel.BasicPublish("user",
+            "user.add",
+            null,
+            body);
+        _logger.LogInformation($"user message published {user.ID}");
+>>>>>>> main
         return user;
     }
 
@@ -45,5 +54,20 @@ public class UserFeature
     {
         return await _userDataContext.User.ToListAsync();
     }
+<<<<<<< HEAD
     
 }
+=======
+
+    public void Dispose()
+    {
+        _channel?.Dispose();
+        _connection?.Dispose();
+    }
+
+    ~UserFeature()
+    {
+        Dispose();
+    }
+}
+>>>>>>> main
