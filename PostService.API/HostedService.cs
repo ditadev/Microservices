@@ -12,6 +12,7 @@ public class HostedService : BackgroundService
     private readonly ILogger<HostedService> _logger;
     private readonly ConnectionFactory _factory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly object _lock = new object();
     private IModel _channel;
     private IConnection _connection;
     private readonly object _lock = new object();
@@ -24,7 +25,10 @@ public class HostedService : BackgroundService
     }
      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
      {
+<<<<<<< HEAD
+=======
          using var scope = _scopeFactory.CreateScope();
+>>>>>>> main
          _connection = _factory.CreateConnection();
          _channel = _connection.CreateModel();
          var consumer = new EventingBasicConsumer(_channel);
@@ -33,6 +37,51 @@ public class HostedService : BackgroundService
          {
              lock (_lock)
              {
+<<<<<<< HEAD
+                 var scope = _scopeFactory.CreateScope();
+                 var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
+                 var body = ea.Body.ToArray();
+                 var message = Encoding.UTF8.GetString(body);
+                 _logger.LogInformation(" [x] Received {0}", message);
+                 var data = JObject.Parse(message);
+                 var type = ea.RoutingKey;
+
+                 switch (type)
+                 {
+                     case "user.add":
+                         if (dbContext.User.Any(a => a.ID == data["id"].Value<int>()))
+                         {
+                             _logger.LogInformation("Ignoring old/duplicate entity");
+                         }
+                         else
+                         {
+                             dbContext.User.Add(new User()
+                             {
+                                 ID = data["id"].Value<int>(),
+                                 Name = data["name"].Value<string>(),
+                             });
+                              dbContext.SaveChangesAsync(stoppingToken);
+                         }
+
+                         break;
+                     // case "user.update":
+                     //     int newVersion = data["version"].Value<int>();
+                     //     var user = dbContext.User.First(a => a.ID == data["id"].Value<int>());
+                     //     if (user.Version >= newVersion)
+                     //     {
+                     //         Console.WriteLine("Ignoring old/duplicate entity");
+                     //     }
+                     //     else
+                     //     {
+                     //         user.Name = data["newname"].Value<string>();
+                     //         user.Version = newVersion;
+                     //         await dbContext.SaveChangesAsync(stoppingToken);
+                     //     }
+                     //     break;
+                 }
+                 _channel.BasicAck(ea.DeliveryTag, false);
+                
+=======
                  using (var scope = _scopeFactory.CreateScope())
                  {
                      var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
@@ -58,8 +107,14 @@ public class HostedService : BackgroundService
                              break;
                      }
                  }
+>>>>>>> main
              }
+
          };
+<<<<<<< HEAD
+         _channel.BasicConsume("user.postservice", false, consumer);
+         _channel.ConfirmSelect();
+=======
 
          _channel.BasicConsume("user.postservice", true, consumer);
          _channel.ConfirmSelect();
@@ -77,7 +132,9 @@ public class HostedService : BackgroundService
          _channel?.Dispose();
          _connection?.Dispose();
          GC.SuppressFinalize(this);
+>>>>>>> main
      }
+     
 }
 
 

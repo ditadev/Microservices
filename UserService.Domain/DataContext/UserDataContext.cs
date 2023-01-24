@@ -6,6 +6,10 @@ namespace UserService.Model.DataContext;
 public class UserDataContext : DbContext
 {
     public DbSet<User> User { get; set; }
+<<<<<<< HEAD
+    public DbSet<IntegrationEvent> IntegrationEventOutbox { get; set; }
+=======
+>>>>>>> main
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseNpgsql(@"Server=127.0.0.1;Port=5433;Database=User;UserId=postgres;");
