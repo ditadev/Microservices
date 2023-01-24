@@ -25,7 +25,6 @@ public class HostedService : BackgroundService
      protected override async Task ExecuteAsync(CancellationToken stoppingToken)
      {
          using var scope = _scopeFactory.CreateScope();
-         var dbContext = scope.ServiceProvider.GetRequiredService<PostDataContext>();
          _connection = _factory.CreateConnection();
          _channel = _connection.CreateModel();
          var consumer = new EventingBasicConsumer(_channel);
