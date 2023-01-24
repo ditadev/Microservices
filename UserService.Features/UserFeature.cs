@@ -1,8 +1,5 @@
-﻿using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using RabbitMQ.Client;
 using UserService.Model.DataContext;
 using UserService.Model.Model;
 

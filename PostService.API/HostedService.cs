@@ -9,10 +9,10 @@ namespace PostService;
 
 public class HostedService : BackgroundService
 {
-    private readonly ILogger<HostedService> _logger;
     private readonly ConnectionFactory _factory;
+    private readonly object _lock = new();
+    private readonly ILogger<HostedService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly object _lock = new object();
     private IModel _channel;
     private IConnection _connection;
 
@@ -50,10 +50,10 @@ public class HostedService : BackgroundService
                         }
                         else
                         {
-                            dbContext.User.Add(new User()
+                            dbContext.User.Add(new User
                             {
                                 ID = data["id"].Value<int>(),
-                                Name = data["name"].Value<string>(),
+                                Name = data["name"].Value<string>()
                             });
                             dbContext.SaveChangesAsync(stoppingToken);
                         }
