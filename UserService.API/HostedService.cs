@@ -23,9 +23,9 @@ public class HostedService : BackgroundService
                 var factory = new ConnectionFactory();
                 using var connection = factory.CreateConnection();
                 using var channel = connection.CreateModel();
-                channel.ConfirmSelect(); // enable publisher confirms
+                channel.ConfirmSelect(); 
                 IBasicProperties props = channel.CreateBasicProperties();
-                props.DeliveryMode = 2; // persist message
+                props.DeliveryMode = 2; 
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -41,7 +41,7 @@ public class HostedService : BackgroundService
                             integrationEvent.Event,
                             null,
                             body);
-                        channel.WaitForConfirmsOrDie(new TimeSpan(0, 0, 5)); // wait 5 seconds for publisher confirm
+                        channel.WaitForConfirmsOrDie(new TimeSpan(0, 0, 5)); 
                         _logger.LogInformation("Published: " + integrationEvent.Event + " " +
                                                integrationEvent.Data);
                         dbContext.Remove(integrationEvent);
