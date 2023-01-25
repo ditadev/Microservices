@@ -78,8 +78,7 @@ public class HostedService : BackgroundService
                 _channel.BasicAck(ea.DeliveryTag, false);
             }
         };
-        _channel.BasicConsume("user.postservice", true, consumer);
-        _channel.ConfirmSelect();
+        _channel.BasicConsume("user.postservice", false, consumer);
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
